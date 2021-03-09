@@ -3,12 +3,14 @@ import requests
 
 space_name = 'CSAP Programmability CTF - Team 2'
 
-headers = {
+def get_list_rooms(see_everything):
+    headers = {
     'Authorization': f"Bearer {config['WEBEX_ACCESS_TOKEN']}",
     'Content-Type': 'application/json',
 }
+    if see_everything == True:
+        headers['max'] = '999'
 
-def get_list_rooms():
     response = requests.get(f"{config['WEBEX_BASE_URL']}/v1/rooms", headers = headers)
 
     if response.status_code == 200:
@@ -18,7 +20,12 @@ def get_list_rooms():
         return None
 
 def get_room_id(space_name):
-    list_rooms = get_list_rooms()
+    headers = {
+    'Authorization': f"Bearer {config['WEBEX_ACCESS_TOKEN']}",
+    'Content-Type': 'application/json',
+}
+
+    list_rooms = get_list_rooms(False)
 
     if list_rooms == None:
         return None
@@ -31,5 +38,4 @@ def get_room_id(space_name):
 
 if __name__ == '__main__':
     space_id = get_room_id(space_name)
-
     print(f"{space_id} is the ID belonging to space {space_name}")
