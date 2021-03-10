@@ -1,10 +1,7 @@
-# Query and send to a space
-#TODO Find the number of messages you have send per space you are in
-#TODO Find the number of spaces you are in
-#TODO Share those information as formatted text into a webex space.
 from env import config
 import requests
 import stage0
+
 
 def get_amount_scheduled_meetings():
     headers = {
@@ -18,13 +15,35 @@ def get_amount_scheduled_meetings():
         return None
 
 def get_amount_messages_sent_per_space():
-    list_spaces = get_list_rooms(True)
+    headers = {
+    'Authorization': f"Bearer {config['WEBEX_ACCESS_TOKEN']}",
+    'Content-Type': 'application/json',
+    }
+
+    list_spaces = stage0.get_list_rooms()
     list_space_ids = []
+
     for space in list_spaces:
         list_space_ids.append(space['id'])
     
+    list_amount_messages_sent_per_space = []
+    for space_id in list_space_ids:
+        message_counter = 0
 
+        response = requests.get(f"{config['WEBEX_BASE_URL']}/v1/messages?roomId={space_id}", headers = headers)
+        response_dict = response.json()['items']
+        if response.status_code == 200:
+            for message in response_dict:
+                if message['personEmail'] == 'pverhage@cisco.com':
+                    message_counter += 1
 
+            list_amount_messages_sent_per_space.append(message_counter)
+        else:
+            print('Response failed!')
+            return None
+    
+    return list_amount_messages_sent_per_space # out of every 50 last messages sent in a space
+    
 def get_amount_joined_spaces():
     headers = {
     'Authorization': f"Bearer {config['WEBEX_ACCESS_TOKEN']}",
@@ -42,8 +61,8 @@ def post_message(amount_scheduled_meetings, amount_joined_spaces, amount_message
     'Accept': 'application/json',
     }
     payload = {
-        'roomId': config['Y2lzY29zcGFyazovL3VzL1JPT00vM2ZmOGU3ZjAtODAwOS0xMWViLTg4NjUtNTE2OGI4NmU0NjA4']
-        'markdown': f"I sent **{str(amount_messages_sent_per_space)}** messages per space, have **{amount_scheduled_meetings}** scheduled meetings and have joined **{amount_joined_spaces}** spaces!"
+        'roomId': config['PRODUCTION_ROOM'],
+        'markdown': f"I sent **{amount_messages_sent_per_space}** messages (out of the last 50 messages) per space, have **{amount_scheduled_meetings}** scheduled meetings and have joined **{amount_joined_spaces}** spaces!"
     }
 
     response = requests.post(f"{config['WEBEX_BASE_URL']}/v1/messages", headers = headers, data = payload)
@@ -57,5 +76,5 @@ def post_message(amount_scheduled_meetings, amount_joined_spaces, amount_message
 if __name__ == '__main__':
     amount_scheduled_meetings = get_amount_scheduled_meetings()
     amount_joined_spaces = get_amount_joined_spaces()
-
-
+    amount_messages_sent_per_space = get_amount_messages_sent_per_space()
+    post_message(amount_scheduled_meetings, amount_joined_spaces, amount_messages_sent_per_space)
